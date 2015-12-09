@@ -13,9 +13,12 @@ class NeuralNetwork(object):
 		"""
 		# Number of units in each layers
 		self.input = unit[0]
-		self.output = unit[len(unit)]
-		for i in range(len(unit)) :
+		self.output = unit[len(unit) - 1]
+		for i in range(len(unit) - 1) :
 			self.hidden[i] = unit[i+1]
+
+		# number of hidden layers
+		self.nbHiddenLayer = len(self.hidden)
 		
 		# Init a (value in unit)
 		self.aInput = [1.0] * self.input
@@ -25,13 +28,13 @@ class NeuralNetwork(object):
 		
 		# Init the weighs randomly
 		self.wInputToHidden = np.random.randn(self.input, self.hidden[0])
-		self.wHiddenToOutput = np.random.randn(self.hidden[len(self.hidden)], self.output)
+		self.wHiddenToOutput = np.random.randn(self.hidden[self.nbHiddenLayer] - 1, self.output)
 		for i in range(len(self.hidden) + 1) :
 			self.wHiddenToHidden = np.random.randn(self.hidden[i], self.hidden[i+1])
 
 	# feefForward begin #
 	def feedForward(self, inputs):
-		if len(inputs) != self.input - 1 :
+		if len(inputs) != self.input :
 			raise ValueError('Wrong dimension for inputs')
 
 		# Calculate the units inputs
@@ -46,18 +49,18 @@ class NeuralNetwork(object):
 			self.aHidden[0][i] = sigmoid(sum)
 
 		# Calculate the units of the others hidden layers
-		for i in range(len(self.hidden) - 1) :
-			for j in range(self.hidden[i + 1] - 1) :
+		for i in range(self.nbHiddenLayer - 1) :	# For each hidden layer
+			for j in range(self.hidden[i + 1]) :
 				sum = 0.0
 				for k in range(self.hidden[i]) :
 					sum += self.aHidden[j][k] * self.wHiddenToHidden[j][i][k]
 				self.aHidden[j] = sigmoid(sum)
 
 		# Calculate the units output
-		for j in range(self.output - 1) :
+		for j in range(self.output) :
 			sum = 0.0
-			for k in range(self.hidden[len(self.aHidden) - 1]):
-				sum += self.aHidden[len(self.aHidden) - 1][k] * self.wHiddenToOutput[j][k]
+			for k in range(self.hidden[self.nbHiddenLayer - 1]):
+				sum += self.aHidden[self.nbHiddenLayer - 1][k] * self.wHiddenToOutput[j][k]
 			self.aOutput[j] = sigmoid(sum)
 
 		return self.aOutput
@@ -65,7 +68,7 @@ class NeuralNetwork(object):
 
 	# backPropagation begin #
 	def backPropagation(self, outputs, alpha) :
-		if len(outputs) != self.output - 1 :
+		if len(outputs) != self.output :
 			raise ValueError('Wrong dimension for outputs')
 
 		# calculate error for output
@@ -74,8 +77,36 @@ class NeuralNetwork(object):
 			error = self.output - outputs[i]
 			delta_outputs[i] = error * dsigmoid(self.aOutput[i])
 
-		# calculate error for hidden (all layer)
+		# delta for hidden (all layers)
 		delta_hiddens = [0.0] * self.hidden
+
+		# calcultate error for the last hidden layer
+		for i in range(self.hidden[self.nbHiddenLayer - 1]) :
+			error = 0.0
+			for j in range(self.output) :
+				error += delta_outputs[j] * self.wHiddenToOutput[i][j]
+			delta_hiddens[self.nbHiddenLayer - 1][i] = error * dsigmoid(self.aHidden[self.nbHiddenLayer - 1])
+
+		# calculate error for the other hidden layers
+		for i in range(self.nbHiddenLayer - 2).reverse() :		# last to first
+			for j in range(self.hidden[i]) :
+				error = 0.0
+				for k in range(self.hidden[i + 1]) :
+					error += delta_hiddens[i + 1] * self.wHiddenToHidden[i+1][j][k]
+				delta_hiddens[i][j] = error * dsigmoid(self.aHidden[i])
+
+		# delta for input
+		delta_inputs = [0.0] * self.input
+
+		# calculate error for the input layer
+		for i in range(self.input) :
+			error = 0.0
+			for j in range(self.output[0]) :
+				error += delta_hiddens[0][j] * self.wInputToHidden[i][j]
+			delta_inputs[i] = error * dsigmoid(self.aInput[i])
+
+		# BEGIN TODO #
+		# END TODO #
 	# backPropagation end #
 
 
